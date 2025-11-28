@@ -313,7 +313,7 @@ function switchUser() {
 
 function updateClock() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour24: true });
     const dateStr = now.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
     
     const clockElement = document.getElementById('taskbar-clock');
@@ -993,7 +993,7 @@ function createTaskManager() {
                     </div>
                     <div class="performance-card">
                         <h3>Memory</h3>
-                        <div class="performance-value" id="perf-memory">0 MB</div>
+                        <div class="performance-value" id="perf-memory">10 MB</div>
                         <div class="performance-graph">
                             <div class="graph-line" id="mem-graph"></div>
                         </div>
@@ -1020,8 +1020,8 @@ function switchTaskMgrTab(tab) {
 function updateProcessList() {
     processes = [
         { name: 'System', cpu: Math.random() * 5, memory: 150 + Math.random() * 50 },
-        { name: 'Windows Explorer', cpu: Math.random() * 10, memory: 80 + Math.random() * 40 },
-        { name: 'Microsoft Edge', cpu: Math.random() * 15, memory: 200 + Math.random() * 100 }
+        { name: 'Windows Explorer', cpu: Math.random() * 10, memory: 126 + Math.random() * 110 },
+        { name: 'Microsoft Edge', cpu: Math.random() * 15, memory: 2000 + Math.random() * 2000 }
     ];
     
     openWindows.forEach(win => {
