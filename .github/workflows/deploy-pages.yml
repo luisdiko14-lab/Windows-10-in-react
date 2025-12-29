@@ -16,7 +16,7 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment: github-pages
 
@@ -54,7 +54,6 @@ jobs:
             echo "<!doctype html><html><body><h1>Index missing</h1></body></html>" > _site/index.html
           fi
 
-      - run: |
           if [ ! -f _site/LICENSE ]; then
             echo "Custom Open License (c) 2025 Luisdiko14-lab, koen-mods" > _site/LICENSE
           fi
@@ -63,10 +62,10 @@ jobs:
             echo "Credits: Luisdiko14-lab, koen-mods" > _site/CREDITS.md
           fi
 
-      - uses: actions/configure-pages@v2
+      - uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
-      - uses: actions/deploy-pages@v1
+      - uses: actions/deploy-pages@v4
