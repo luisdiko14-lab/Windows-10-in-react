@@ -1,0 +1,132 @@
+name: Deploy to GitHub Pages
+
+# Trigger on push to main (or change the branch name if you use "master") and allow manual runs
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read      # required to read repository files
+  pages: write        # required to create/update GitHub Pages deployments
+  id-token: write     # required by some GitHub Pages flows
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: github-pages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node (for build detection & npm builds)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install & build (if package.json has a build script)
+        id: build-step
+        run: |
+          set -e
+          if [ -f package.json ]; then
+            echo "package.json found"
+            HAS_BUILD=$(node -e "const p=require('./package.json'); console.log(Boolean(p.scripts && p.scripts.build))")
+            if [ "${HAS_BUILD}" = "true" ]; then
+              echo "Detected 'build' script — running npm ci && npm run build"
+              npm ci
+              npm run build --if-present
+            else
+              echo "No build script detected — skipping build"
+            fi
+          else
+            echo "No package.json found — assuming plain HTML/CSS/JS site"
+          fi
+
+      - name: Prepare artifact folder for Pages
+        run: |
+          set -e
+          rm -rf _site
+          mkdir -p _site
+
+          # Prefer common build output folders in this order: build, dist, public
+          if [ -d build ] && [ "$(ls -A build)" ]; then
+            echo "Using 'build' directory"
+            cp -r build/* _site/
+          elif [ -d dist ] && [ "$(ls -A dist)" ]; then
+            echo "Using 'dist' directory"
+            cp -r dist/* _site/
+          elif [ -d public ] && [ "$(ls -A public)" ]; then
+            echo "Using 'public' directory"
+            cp -r public/* _site/
+          else
+            # No common build output found — copy repo root (static files)
+            echo "No build output directory found — copying repo root files into _site"
+            # Exclude common large or irrelevant folders
+            rsync -av --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='*.yml' --exclude='*.yaml' ./ _site/ || true
+          fi
+
+          # Make sure there's an index.html in _site (helpful for Pages)
+          if [ ! -f _site/index.html ]; then
+            echo "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Index</title></head><body><h1>Index missing — add your index.html</h1></body></html>" > _site/index.html
+            echo "Added fallback index.html"
+          fi
+
+      - name: Add LICENSE and CREDITS to artifact (if missing)
+        run: |
+          set -e
+          # LICENSE placeholder — replace with your full custom license if you have one
+          if [ ! -f _site/LICENSE ]; then
+            cat > _site/LICENSE <<'EOF'
+Custom Open License (PS1, Batch, and Other Files)
+
+Copyright (c) 2025
+Authors: Luisdiko14-lab, koen-mods
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated files (including scripts, batch files, and assets), to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the following conditions:
+
+[This is a placeholder license text. Replace this block with your full, explicit Custom Open License terms.]
+
+EOF
+            echo "Added placeholder LICENSE to _site"
+          fi
+
+          if [ ! -f _site/CREDITS.md ]; then
+            cat > _site/CREDITS.md <<'EOF'
+# Credits
+
+- Luisdiko14-lab
+- koen-mods
+
+Thank you to all contributors and third-party authors. Replace or extend this file with project-specific credits.
+EOF
+            echo "Added CREDITS.md to _site"
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v2
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v1
+
+      - name: Show deployed URL
+        if: success()
+        run: |
+          echo "Deployment finished."
+          # The official deploy action sets the ENV var with the deployment url; print summary
+          if [ -n "${{ steps.deploy.outputs.page_url }}" ]; then
+            echo "Published to: ${{ steps.deploy.outputs.page_url }}"
+          else
+            echo "Published — check repository > Settings > Pages for the site URL."
+          fi
